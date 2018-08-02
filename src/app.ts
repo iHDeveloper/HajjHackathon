@@ -18,16 +18,10 @@ const DEFAULT_LANGUAGE = "ar";
 const SECRET_KEY = "HAJJ_HACKATHON_2018_SECRET_KEY";
 const DATABASE_NAME = "hajjhackathon";
 const DATABASE_URL = "mongodb://127.0.0.1/" + DATABASE_NAME;
-let DatabaseModels: any = {};
+
 mongoose.connect(DATABASE_URL);
 const dbConnection: mongoose.Connection = mongoose.connection;
 dbConnection.on('error', console.error.bind(console, 'MongoDB connection error: '));
-
-function storeModel(name: string, collection: string, schema: any) {
-    DatabaseModels[name] = mongoose.model(name, new mongoose.Schema(schema, {
-        collection: collection
-    }));
-}
 
 const DB_Member_Schema = new mongoose.Schema({
     username: { type: String, trim: true, required: true },
@@ -52,39 +46,6 @@ const DB_Group_Schema = new mongoose.Schema({
     collection: "Groups",
 });
 const DB_Group = mongoose.model('Group', DB_Group_Schema);
-
-storeModel("Admin", "Admins", {
-    username: { type: String, trim: true, required: true },
-    password: { type: String, trim: true, required: true },
-    type: { type: Number, trim: true, required: true },
-    firstname: { type: String, trim: true, required: true },
-    lastname: { type: String, trim: true, required: true },
-    nationality: { type: String, trim: true, required: true },
-    gender: { type: Boolean, trim: true, required: true },
-    phonenumber: { type: String, trim: true, required: true },
-});
-
-storeModel("Leader", "Leaders", {
-    username: { type: String, trim: true, required: true },
-    password: { type: String, trim: true, required: true },
-    type: { type: Number, trim: true, required: true },
-    firstname: { type: String, trim: true, required: true },
-    lastname: { type: String, trim: true, required: true },
-    nationality: { type: String, trim: true, required: true },
-    gender: { type: Boolean, trim: true, required: true },
-    phonenumber: { type: String, trim: true, required: true },
-});
-
-storeModel("test", "tests", {
-    username: { type: String, trim: true, required: true },
-    password: { type: String, trim: true, required: true },
-    type: { type: Number, trim: true, required: true },
-    firstname: { type: String, trim: true, required: false },
-    lastname: { type: String, trim: true, required: false },
-    nationality: { type: String, trim: true, required: false },
-    gender: { type: Boolean, trim: true, required: false },
-    phonenumber: { type: String, trim: true, required: false },
-});
 
 /**
  * The resposne tools to register a custom layout for the response
@@ -112,22 +73,11 @@ class ResponseUntil {
 
 }
 
-// class ChannelPacket { 
-// }
-
-// class ChannelListener { 
-//     public readonly name: string;
-
-//     constructor(name: string) {
-//         this.name = name;
-//     }
-
-//     public on(client: SocketIO.Client, data: any): string | undefined {
-
-//     }
-
-// }
-
+/**
+ * To know what should call back when some request
+ * 
+ * @author      iHDeveloper
+ */
 enum CallbackMethod { 
     AUTH = 0
 } 
@@ -257,6 +207,10 @@ class Function extends ResponseUntil{
         });
     }
 
+    /**
+     * To auth the client
+     * @param req To read auth header and check from it
+     */
     private auth(req: Express.Request): string | undefined {
         if(req.headers && req.headers.authentication && (<string> req.headers.authentication).split(" ")[0] === "JWT") {
             return (<string>req.headers.authentication).split(" ")[1];
@@ -473,6 +427,11 @@ class PrintFunction extends Function {
 
 }
 
+/**
+ * Handle all of the auth routes and manage it here
+ * 
+ * @author      iHDeveloper
+ */
 class AuthFunction extends Function {
 
     constructor() {
@@ -489,7 +448,7 @@ class AuthFunction extends Function {
     }
 
 
-    public client(params: any): string | CallbackMethod {
+    private client(params: any): string | CallbackMethod {
         console.log("login in");
         let username: string;
         let password: string;
@@ -515,7 +474,7 @@ class AuthFunction extends Function {
         });
     }
 
-    public screen(params: any): string | CallbackMethod | undefined {
+    private screen(params: any): string | CallbackMethod | undefined {
         if(params !== undefined) {
             let id: string;
             let password: string;
@@ -542,6 +501,11 @@ class AuthFunction extends Function {
     }
 }
 
+/**
+ * Check if there's something wrong happen in the zones or somewhere else
+ * 
+ * @author      iHDeveloper
+ */
 class AlertFunction extends Function {
 
     constructor() {
@@ -567,6 +531,11 @@ class AlertFunction extends Function {
 
 }
 
+/**
+ * Manage clients and register them
+ * 
+ * @author      iHDeveloper
+ */
 class ClientFunction extends Function {
 
     constructor() {
@@ -580,7 +549,7 @@ class ClientFunction extends Function {
         return this.requireMethod();
     }
 
-    public create(params: any): string | CallbackMethod {
+    private create(params: any): string | CallbackMethod {
         console.log("register!");
         let username: string;
         let password: string;
@@ -617,6 +586,11 @@ class ClientFunction extends Function {
 
 }
 
+/**
+ * Manage the groups in the hajj and see what they are doing
+ * 
+ * @author      iHDeveloper
+ */
 class GroupFunction extends Function {
 
     constructor() {
@@ -663,6 +637,11 @@ class GroupFunction extends Function {
 
 }
 
+/**
+ * A group model that explains it and do some stuff on it
+ * 
+ * @author      iHDeveloper
+ */
 class Group {
     private static groups: Map<string, Group> = new Map<string, Group>();
 
@@ -687,11 +666,21 @@ class Group {
         this.clients = new Map<string, Client> ();
     }
 
+    /**
+     * Add Clients into the group
+     * 
+     * @param client Client to add it to the group
+     */
     public add(client: Client) {
         this.clients.set(client.id, client);
         client.group = this;
     }
 
+    /**
+     * Save all of the clients data in the mongoDB
+     * 
+     * @author      iHDeveloper
+     */
     public save(): void {
         const doc: mongoose.Document = new DB_Group();
         doc.set('id', this.id);
@@ -701,8 +690,13 @@ class Group {
         doc.save();
     }
 
-} 
+}
 
+/**
+ * Manage the screens and register them
+ * 
+ * @author      iHDeveloper
+ */
 class ScreenFunction extends Function {
 
     constructor() {
@@ -736,6 +730,11 @@ class ScreenFunction extends Function {
 
 }
 
+/**
+ * A module that explains a layout for all of the models that need to auth
+ * 
+ * @author      iHDeveloper
+ */
 class AuthModule {
     public readonly id: string;
     protected password: string;
@@ -747,6 +746,13 @@ class AuthModule {
         this.authToken = AuthTokenGenerator.sign({id: this.id, password: this.password}, SECRET_KEY);
     }
 
+    /**
+     *  Check from the password and give a jwt token to the requester
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       password Passwrod to compare between it and the other password
+     */
     public check(password: string): string | undefined {
         if(password === this.password) {
             return AuthTokenGenerator.sign({id: this.id, password: this.password}, SECRET_KEY);
@@ -754,6 +760,11 @@ class AuthModule {
         return undefined;
     }
 
+    /**
+     * Auth Token to verify it with other client
+     * 
+     * @param token Auth token of the client
+     */
     public auth(token: string): string | undefined {
         if ( this.authToken === token ) {
             return this.authToken;
@@ -762,6 +773,11 @@ class AuthModule {
     }
 }
 
+/**
+ * Explains Screen data
+ * 
+ * @author      iHDeveloper
+ */
 class Screen extends AuthModule{
     private currentLanguage: string;
     private print: boolean;
@@ -772,39 +788,95 @@ class Screen extends AuthModule{
         this.print = false;
     }
 
+    /**
+     * Set the current language of the screen to analysis this data later
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param currentLanguage Language
+     */
     public setCurrentLanguage(currentLanguage: string ) {
         this.currentLanguage = currentLanguage;
     } 
 
+    /**
+     * Set if the screen can print a paper or sms or other things
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param hasPrint Does screen print ?
+     */
     public setHasPrint(hasPrint: boolean ) {
         this.print = hasPrint;
     }
 
+    /**
+     * Get the current language of the screen
+     * 
+     * @author      iHDeveloper
+     */
     public getCurrentLanguage(): string {
         return this.currentLanguage;
     }
 
+    /**
+     * Does the screen print or no ?
+     * 
+     * @author      iHDeveloper
+     */
     public hasPrint(): boolean {
         return this.print;
     }
 
 }
 
+/**
+ * The type of the client in the Hajj
+ * 
+ * @author      iHDeveloper
+ */
 enum ClientType {
-    MEMBER = 0,
-    LEADER = 1,
-    ADMIN = 2
+    MEMBER = 0, // normal member in the group
+    LEADER = 1, // leader in the group
+    ADMIN = 2   // admin in the group
 }
 
+/**
+ * Client Data to use it for analysis later
+ * 
+ * @author      iHDeveloper
+ */
 class Client extends AuthModule{
     public static readonly map: Map<string, Client> = new Map<string, Client>();
 
+    /**
+     * Create the client and import it in the list
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       id Username
+     * @param       password Password
+     * @param       type Client Type
+     * @param       firstname First name
+     * @param       lastname Last name
+     * @param       nationality Nationality
+     * @param       gender Gender
+     * @param       phonenumber Phone Number
+     */
     public static create(id: string, password: string, type: ClientType, firstname: string, lastname: string, nationality: string, gender: boolean, phonenumber: string): Client {
         const client: Client = new Client(id, password, type, firstname, lastname, nationality, gender, phonenumber);
         Client.map.set(client.id, client);
         return client;
     }
 
+    /**
+     * Get the client by ID
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       id Client ID
+     * @return      If return undefined means it is not in the map
+     */
     public static get(id: string): Client | undefined{
         return this.map.get("username" + id);
     }
@@ -832,6 +904,11 @@ class Client extends AuthModule{
         this.group = undefined;
     }
 
+    /**
+     * Save all of the client data in mongoDB
+     * 
+     * @author      iHDeveloper
+     */
     public save(): void {
         if (this.type === ClientType.MEMBER) {
             const doc: mongoose.Document = new DB_Member();
@@ -848,27 +925,69 @@ class Client extends AuthModule{
     }
 }
 
+/**
+ * Manage all the screens
+ * 
+ * @author      iHDeveloper
+ */
 class Screens {
     private static screens: Map<string, Screen> = new Map<string, Screen>();
 
+    /**
+     * Create screen
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       id Screen ID
+     * @param       password Screen Password
+     */
     public static create(id: string, password: string): Screen | undefined { 
         const screen: Screen = new Screen(id, password);
         return Screens.add(screen);
     }
 
+    /**
+     * Check if the screen is exist or no
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       id Sceren ID
+     */
     public static exist(id: string): boolean {
         return Screens.screens.has(id);
     }
 
+    /**
+     * Add Screen to cache
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       screen Screen to cache
+     */
     public static add(screen: Screen): Screen { 
         this.screens.set(screen.id, screen);
         return screen;
     }
 
+    /**
+     * Get the screen if it's available in the map
+     * 
+     * @author      iHDeveloper 
+     * 
+     * @param       id Screen ID
+     */
     public static get(id: string): Screen | undefined { 
         return this.screens.get(id);
     }
 
+    /**
+     * Auth the token verify
+     * 
+     * @author      iHDeveloper
+     * 
+     * @param       token Auth Token
+     * @param       callback Callback when the token got verify
+     */
     public static auth(token: string, callback: (screen: Screen | undefined) => void): void { 
         AuthTokenGenerator.verify(token, SECRET_KEY, (err: AuthTokenGenerator.VerifyErrors, decode: any) => {
             if ( isNullOrUndefined(err) ) {
@@ -880,6 +999,11 @@ class Screens {
     }
 }
 
+/**
+ * Channel listener for the Socket.IO
+ * 
+ * @author      iHDeveloper
+ */
 class ChannelListener {
     public readonly name: string;
 
@@ -887,13 +1011,17 @@ class ChannelListener {
         this.name = name;
     }
 
-    // public on(socket: SocketIO.Socket, data: any) {
-        
-    // }
-
 }
 
-// Delcration Functions
+/**
+ * Make a response handler to build the routes of the functions
+ * 
+ * @author      iHDeveloper
+ * 
+ * @param       func Function of the route
+ * @param       req Client Request
+ * @param       resp Client Response
+ */
 function __resposne(func: Function, req: Express.Request, resp: Express.Response): void {
     const res: string | CallbackMethod = func.run(req, req.params.method);
     if(typeof(res) === typeof(CallbackMethod)) {
@@ -908,15 +1036,35 @@ function __resposne(func: Function, req: Express.Request, resp: Express.Response
     return;
 }
 
+/**
+ * When the Path got hit with get method
+ * 
+ * @author      iHDeveloper
+ * 
+ * @param       path Route Path
+ * @param       callback Callback when the path got hit from the client
+ */
 function __get(path: string, callback: (req: Express.Request, resp: Express.Response) => void) {
     app.get(path, callback);
 }
 
+/**
+ * When the path got hit with post method
+ * 
+ * @author      iHDeveloper
+ * 
+ * @param       path Route Path
+ * @param       callback Callback when the path got hit from the client
+ */
 function __post(path: string, callback: (req: Express.Request, resp: Express.Response) => void) {
     app.post(path, callback);
 }
 
-// Functions
+/**
+ * Store all of the functions and cache them
+ * 
+ * @author      iHDeveloper
+ */
 const functions: Function[] = [
     new LanguageFunction(),
     new LocationFunction(),
@@ -928,8 +1076,11 @@ const functions: Function[] = [
     new ScreenFunction()
 ];
 
-// Routers
-
+/**
+ * Override all of the route functions
+ * 
+ * @author      iHDeveloper
+ */
 for (const func of functions) {
     console.log(`GET | Post => /${func.name}/{method}?{params}`);
     __get(`/${func.name}/:method`, (req: Express.Request, resp: Express.Response) => {
@@ -956,6 +1107,9 @@ __get('/ping', (req: Express.Request, resp: Express.Response) => {
     resp.send(new ResponseUntil()._response(0, {}));
 });
 
+/**
+ * When the SocketIO Server hit a connection
+ */
 SocketIOServer.on('connection', (socket: SocketIO.Socket) => {
     socket.on('question', (data: any) => {
         console.log('Answer: ', data);
@@ -976,6 +1130,9 @@ SocketIOServer.on('connection', (socket: SocketIO.Socket) => {
     });
 });
 
+/**
+ * Make the Http Server listen to port 5000
+ */
 HttpServer.listen(5000, () => {
     console.log("Running");
 });

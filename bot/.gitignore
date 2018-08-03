@@ -1,4 +1,5 @@
 node_modules
 azure.err
 *.publishsettings
-.vscode
+.vscode/
+package-lock.json
